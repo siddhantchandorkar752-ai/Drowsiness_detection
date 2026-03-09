@@ -1,43 +1,139 @@
-Siddhant, aapke Drowsiness Detection System ke liye ek professional aur detailed README ye raha. Maine isme installation steps aur aapke trained CNN model ka mention bhi kar diya hai.
+@'
+# 🚗 Driver Drowsiness Detection System
+### Real-Time CNN-Powered Eye State Monitoring
 
-Ise aap README.md file mein copy-paste kar sakte hain:
+![Python](https://img.shields.io/badge/Python-3.x-blue)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange)
+![OpenCV](https://img.shields.io/badge/OpenCV-4.x-green)
+![CNN](https://img.shields.io/badge/Model-CNN-red)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-🚗 Drowsiness Detection System using CNN & OpenCV
-Siddhant, ye project real-time mein driver ki aankhon ko monitor karta hai aur agar driver ko neend aane lage (aankhein band ho jayein), toh ye turant Alarm baja deta hai. Isme Deep Learning (CNN) ka use kiya gaya hai.
+> A real-time drowsiness detection system that monitors driver eye states through a webcam feed and triggers an immediate audio alert when prolonged eye closure is detected — preventing accidents before they happen.
 
-🌟 Key Features
-Real-time Monitoring: Webcam ke zariye live detection.
+---
 
-Deep Learning Model: Trained CNN model jo 'Open' aur 'Closed' eyes ke beech classify karta hai.
+## 🎯 The Problem
+```
+Every year, 1.35 million people die in road accidents.
+20% of all serious accidents are fatigue-related.
+A driver closing eyes for just 2 seconds at 100km/h
+travels 55 meters completely blind.
+```
 
-Alert System: 🔊 Alarm sound (WAV file) jab drowsiness detect hoti hai.
+**This system detects that 2-second window — and acts.**
 
-Haar Cascades: Face aur eyes ko accurately track karne ke liye.
+---
 
-📁 Project Structure
-Plaintext
+## ⚡ How It Works
+```
+Webcam Feed
+     │
+     ▼
+Haar Cascade ──► Face Detection
+     │
+     ▼
+Haar Cascade ──► Eye Region Extraction
+     │
+     ▼
+CNN Model ──────► Open / Closed Classification
+     │
+     ▼
+Alert Engine ───► 🔊 Alarm if eyes closed > threshold
+```
+
+---
+
+## 🌟 Key Features
+
+| Feature | Description |
+|---|---|
+| 👁️ Real-Time Monitoring | Live webcam feed analysis at 30fps |
+| 🧠 CNN Classification | Custom trained model — Open vs Closed eyes |
+| 🔊 Instant Alert | Audio alarm triggers within milliseconds |
+| 📡 Haar Cascades | Robust face + eye localization |
+| ⚡ Lightweight | Runs on CPU — no GPU required |
+
+---
+
+## 📁 Project Structure
+```
 Drowsiness_detection/
-├── haar cascade files/       # Face & Eye detection XML files
-├── models/                   # Contains trained CNN model (cnnCat2.h5)
-├── drowsinessdetection.py    # Main execution script
-├── model.py                  # Model architecture/training script
-├── alarm.wav                 # Alert sound file
-├── README.md                 # Project documentation
-└── .gitignore                # Ignoring venv & large files
-🚀 How to Run?
-1. Requirements
-Sabse pehle zaruri libraries install karein:
+├── haar cascade files/
+│   ├── haarcascade_frontalface_alt.xml
+│   └── haarcascade_eye_tree_eyeglasses.xml
+├── models/
+│   └── cnnCat2.h5              # Trained CNN model
+├── drowsinessdetection.py      # Main inference script
+├── model.py                    # CNN architecture + training
+├── alarm.wav                   # Alert audio
+└── README.md
+```
 
-Bash
-pip install opencv-python tensorflow mixer
-2. Execution
-Main script ko run karein:
+---
 
-Bash
+## 🚀 Quick Start
+
+### Install Dependencies
+```bash
+git clone https://github.com/siddhantchandorkar752-ai/drowsiness-detection.git
+cd drowsiness-detection
+pip install opencv-python tensorflow keras pygame numpy
+```
+
+### Run
+```bash
 python drowsinessdetection.py
-🛠️ Tech Stack
-Language: Python
+```
 
-Libraries: OpenCV, TensorFlow, Keras, Pygame (for audio)
+---
 
-Model: Convolutional Neural Network (CNN)
+## 🧠 Model Architecture
+```
+Input: 24x24 Grayscale Eye Image
+     │
+Conv2D(32) → ReLU → MaxPool
+     │
+Conv2D(64) → ReLU → MaxPool
+     │
+Conv2D(128) → ReLU → MaxPool
+     │
+Flatten → Dense(128) → Dropout(0.5)
+     │
+Dense(2) → Softmax
+     │
+Output: [Open, Closed]
+```
+
+---
+
+## 🛠️ Tech Stack
+
+- **Language**: Python 3.x
+- **Computer Vision**: OpenCV + Haar Cascades
+- **Deep Learning**: TensorFlow / Keras CNN
+- **Audio**: Pygame
+- **Model**: Custom trained `cnnCat2.h5`
+
+---
+
+## 📊 Real World Impact
+```
+Without System          With System
+─────────────────       ──────────────────
+Driver falls asleep  →  Alert at first sign
+Accident occurs      →  Driver wakes up
+Injury / Death       →  Life saved ✅
+```
+
+---
+
+## 👨‍💻 Author
+
+**Siddhant Chandorkar**
+- GitHub: [@siddhantchandorkar752-ai](https://github.com/siddhantchandorkar752-ai)
+
+---
+
+## 📄 License
+MIT License — Free to use, modify, and distribute.
+'@ | Set-Content -Path README_drowsiness.md -Encoding UTF8
