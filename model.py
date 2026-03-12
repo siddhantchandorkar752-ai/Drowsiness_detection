@@ -5,7 +5,7 @@ from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Flatten, Dense
 from keras.utils import to_categorical
 
 # Keras 3 (Python 3.11) compatible legacy import
-from keras.src.legacy.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 
 # 1. Generator Function (Sahi path ke saath)
 def generator(dir, gen=None, shuffle=True, batch_size=1, target_size=(24,24), class_mode='categorical'):

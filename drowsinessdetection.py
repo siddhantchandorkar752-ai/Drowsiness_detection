@@ -1,113 +1,113 @@
 import cv2
-import os
-from keras.models import load_model
+import logging
 import numpy as np
 from pygame import mixer
-import time
+from config import Config
+from predictor import DrowsinessPredictor
 
+logging.basicConfig(level=logging.INFO, format=Config.LOG_FORMAT)
+logger = logging.getLogger(__name__)
 
-mixer.init()
-sound = mixer.Sound('alarm.wav')
+def init_alarm():
+    mixer.init()
+    sound = mixer.Sound(Config.ALARM_PATH)
+    logger.info("Alarm initialized.")
+    return sound
 
-face = cv2.CascadeClassifier('haar cascade files\haarcascade_frontalface_alt.xml')
-leye = cv2.CascadeClassifier('haar cascade files\haarcascade_lefteye_2splits.xml')
-reye = cv2.CascadeClassifier('haar cascade files\haarcascade_righteye_2splits.xml')
+def play_alarm(sound):
+    try:
+        if not mixer.get_busy():
+            sound.play(-1) # -1 ka matlab hai loop mein bajega jab tak stop na karein
+    except mixer.error as e:
+        logger.error(f"Alarm failed: {e}")
 
+def stop_alarm(sound):
+    if mixer.get_busy():
+        sound.stop() # Aankh khulte hi shant karne ka brahmastra
 
+def draw_metric_bar(frame, label, value, y, color, threshold=None):
+    bx, bw, bh = 10, 200, 18
+    fill = int(min(value, 1.0) * bw)
+    cv2.rectangle(frame, (bx, y), (bx + bw, y + bh), (50, 50, 50), -1)
+    cv2.rectangle(frame, (bx, y), (bx + fill, y + bh), color, -1)
+    cv2.rectangle(frame, (bx, y), (bx + bw, y + bh), (200, 200, 200), 1)
+    if threshold:
+        tx = bx + int(threshold * bw)
+        cv2.line(frame, (tx, y), (tx, y + bh), (255, 255, 255), 2)
+    cv2.putText(
+        frame, f"{label}: {value:.2f}",
+        (bx + bw + 10, y + 13),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.42,
+        (255, 255, 255), 1, cv2.LINE_AA
+    )
 
-lbl=['Close','Open']
+def draw_hud(frame, metrics, score):
+    h, w = frame.shape[:2]
+    overlay = frame.copy()
+    cv2.rectangle(overlay, (0, 0), (270, h), (15, 15, 15), -1)
+    cv2.addWeighted(overlay, 0.65, frame, 0.35, 0, frame)
 
-model = load_model('models/cnncat2.h5')
-path = os.getcwd()
-cap = cv2.VideoCapture(0)
-font = cv2.FONT_HERSHEY_COMPLEX_SMALL
-count=0
-score=0
-thicc=2
-rpred=[99]
-lpred=[99]
+    cv2.putText(frame, "DROWSINESS MONITOR", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 212, 255), 1, cv2.LINE_AA)
 
-while(True):
-    ret, frame = cap.read()
-    height,width = frame.shape[:2] 
+    ear_val = max(0.0, 1.0 - (metrics["ear"] / 0.35))
+    drowsy_val = min(score / Config.DROWSY_SCORE_THRESHOLD, 1.0)
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    draw_metric_bar(frame, "EYE CLOSURE", ear_val, 45, (0, 100, 255), threshold=0.7)
+    draw_metric_bar(frame, "DROWSY LVL ", drowsy_val, 75, (0, 50, 255), threshold=1.0)
+
+    status_text = "ALERT & FOCUSED"
+    status_color = (0, 160, 0)
     
-    faces = face.detectMultiScale(gray,minNeighbors=5,scaleFactor=1.1,minSize=(25,25))
-    left_eye = leye.detectMultiScale(gray)
-    right_eye =  reye.detectMultiScale(gray)
+    if not metrics["face_detected"]:
+        status_text, status_color = "NO FACE DETECTED", (80, 80, 80)
+    elif metrics["eye_closed"]:
+        status_text, status_color = "EYES CLOSED", (0, 0, 200)
 
-    cv2.rectangle(frame, (0,height-50) , (200,height) , (0,0,0) , thickness=cv2.FILLED )
+    cv2.rectangle(frame, (10, 105), (180, 135), status_color, -1)
+    cv2.putText(frame, status_text, (16, 126), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
 
-    for (x,y,w,h) in faces:
-        cv2.rectangle(frame, (x,y) , (x+w,y+h) , (100,100,100) , 1 )
+def update_score(score, metrics):
+    if not metrics["face_detected"]:
+        return score
+    if metrics["eye_closed"]:
+        return score + Config.SCORE_INCREMENT
+    return max(Config.SCORE_MIN, score - Config.SCORE_DECAY)
 
-    for (x,y,w,h) in right_eye:
-        r_eye=frame[y:y+h,x:x+w]
-        count=count+1
-        r_eye = cv2.cvtColor(r_eye,cv2.COLOR_BGR2GRAY)
-        r_eye = cv2.resize(r_eye,(24,24))
-        r_eye= r_eye/255
-        r_eye=  r_eye.reshape(24,24,-1)
-        r_eye = np.expand_dims(r_eye,axis=0)
-        #rpred = model.predict_classes(r_eye)
-        # rpred = model.predict(r_eye)
-        # rpred = np.round(rpred).astype(int)
-        rpred = np.argmax(model.predict(r_eye), axis=-1)
-        if(rpred[0]==1):
-            lbl='Open' 
-        if(rpred[0]==0):
-            lbl='Closed'
-        break
-
-    for (x,y,w,h) in left_eye:
-        l_eye=frame[y:y+h,x:x+w]
-        count=count+1
-        l_eye = cv2.cvtColor(l_eye,cv2.COLOR_BGR2GRAY)  
-        l_eye = cv2.resize(l_eye,(24,24))
-        l_eye= l_eye/255
-        l_eye=l_eye.reshape(24,24,-1)
-        l_eye = np.expand_dims(l_eye,axis=0)
-        #lpred = model.predict_classes(l_eye)
-        # lpred = model.predict(l_eye)
-        # lpred = np.round(lpred).astype(int)
-        lpred = np.argmax(model.predict(l_eye), axis=-1)
-        print(lpred)
-        if(lpred[0]==1):
-            lbl='Open'   
-        if(lpred[0]==0):
-            lbl='Closed'
-        break
-
-    if(rpred[0]==0 and lpred[0]==0):
-        score=score+1
-        cv2.putText(frame,"Closed",(10,height-20), font, 1,(255,255,255),1,cv2.LINE_AA)
-    # if(rpred[0]==1 or lpred[0]==1):
-    else:
-        score=score-1
-        cv2.putText(frame,"Open",(10,height-20), font, 1,(255,255,255),1,cv2.LINE_AA)
+def main():
+    predictor = DrowsinessPredictor()
+    sound = init_alarm()
+    cap = cv2.VideoCapture(0)
     
+    if not cap.isOpened():
+        logger.critical("Webcam not accessible.")
+        return
+
+    score = 0
+    logger.info("Detection started. Press 'q' to quit.")
+
+    while True:
+        ret, frame = cap.read()
+        if not ret: continue
+
+        frame = cv2.flip(frame, 1) # Mirror effect ke liye taaki natural lage
+        metrics = predictor.analyze_frame(frame)
+        score = update_score(score, metrics)
         
-    if(score<0):
-        score=0   
-    cv2.putText(frame,'Score:'+str(score),(100,height-20), font, 1,(255,255,255),1,cv2.LINE_AA)
-    if(score>15):
-        #person is feeling sleepy so we beep the alarm
-        cv2.imwrite(os.path.join(path,'image.jpg'),frame)
-        try:
-            sound.play()
-            
-        except:  # isplaying = False
-            pass
-        if(thicc<16):
-            thicc= thicc+2
+        draw_hud(frame, metrics, score)
+
+        # MAIN LOGIC: Alarm play and instant STOP
+        if score >= Config.DROWSY_SCORE_THRESHOLD:
+            play_alarm(sound)
+            cv2.rectangle(frame, (0, 0), (frame.shape[1], frame.shape[0]), (0, 0, 255), 8)
         else:
-            thicc=thicc-2
-            if(thicc<2):
-                thicc=2
-        cv2.rectangle(frame,(0,0),(width,height),(0,0,255),thicc) 
-    cv2.imshow('frame',frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-cap.release()
-cv2.destroyAllWindows()
+            stop_alarm(sound) # Aankh khulte hi score girega aur yahan alarm band ho jayega!
+
+        cv2.imshow("Driver Drowsiness Detection", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
